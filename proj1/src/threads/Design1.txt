@@ -1,0 +1,180 @@
+
+CIS 520 - Programming Project #1
+
+                   
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Abdulkareem Alkhiary <araasai@k-state.edu>
+Cody Morse <cody598@k-state.edu>
+Jack Johnson <jjohn98@k-state.edu>
+
+...
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for
+>> the TA, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation,
+>> course text, lecture notes, and course staff.
+
+https://github.com/danelia/pintos
+-Project1Session.pdf, Project1SessionA (Lecture Notes)
+
+
+                 ALARM CLOCK
+                 ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+struct list sleep_list; 
+	--Sleeping threads are stored, located in timer.c
+struct lock sleep_lock; 
+	--Locks sleep_list for synchronization, located in timer.c
+struct sleep_element_list
+	--list containing members that are required to avoid busy waiting, located in timer.h
+elements added to sleep_element_list
+        struct list_elem element;  
+	   --List element for sleep_list, located in timer.h
+        struct semaphore* sema; 
+           --Semaphore for letting the sleeping thread through, located in timer.h
+        struct thread* current_thread;
+           -- Sleeping thread
+        int64_t tick_time; 
+           --Tick value the thread needs in order to be awakened, located in timer.h
+
+static bool
+compare_element(const struct list_elem *a, const struct list_elem *b, void * aux UNUSED)
+{
+  struct sleep_element_list* first = list_entry(a, struct sleep_element_list, element);
+  struct sleep_element_list* second = list_entry(b, struct sleep_element_list, element);
+  return first->tick_time < second->tick_time;
+}
+	--Compares the two element tick times and returns whether the first element tick time is greater than
+	  the second. This is important as it's crucial to the sorting of the ordered list.
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to your timer_sleep(),
+>> including the effects of the timer interrupt handler.
+The active thread is given a tick time to wake up, the tick time is the active ticks value and passed in tick value.
+The thread is inserted into an appropriate location in the ordered list (sleep_list). The thread is placed in the 
+ordered list utilizing the compare function between two elements which compares the tick times with other threads
+in the list. The thread is blocked until it has been awakened to prevent the thread from execution.
+
+>> A3: What steps are taken to minimize the amount of time spent in the timer interrupt handler?
+Elements are placed into an ordered list based on their tick/wakeup time. If we say the first thread inserted wakes up
+in 12 seconds then a second thread is inserted and wakes up in 6 seconds, the second thread will be inserted before the
+first. This is accomplished in timer_sleep() beforehand so timer_interrupt() doesn't need to worry about searching/sorting.
+If a thread needs to be woken, we begin at the start of the list while there are still threads in sleep_list, then 
+see if the current thread tick time is less than the current tick. This will wake up all the threads, but in since the
+list is sequential, the first thread needs to be woken in order for the suceeding threads to be woken.
+
+---- SYNCHRONIZATION ----
+
+>> A4: How are race conditions avoided when multiple threads call timer_sleep() simultaneously?
+Race conditions are avoided by using the proper thread synchronization in critical sections. 
+We use a semaphore to acquire the lock and allow only that thread to access data at that time. 
+Once its done, it releases the lock allowing for the data to be accessed again. We created a thread struct, 
+which for each thread, contains seperate members that correspond to that thread only.
+
+>> A5: How are race conditions avoided when a timer interrupt occurs during a call to timer_sleep()?
+There is no race conditions as the active thread can modify data.
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to other designs that you considered?
+Makes since to all of our group members. Additionally, the professor stated to avoid using interrupts and to instead
+implement using locks/semaphores.
+
+
+             PRIORITY SCHEDULING
+             ===================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+>> B2: Explain the data structure used to track priority donation.
+
+
+---- ALGORITHMS ----
+
+>> B3: How do you ensure that the highest priority thread waiting for
+>> a lock, semaphore, or condition variable wakes up first?
+
+>> B4: Describe the sequence of events when a call to lock_acquire()
+>> causes a priority donation.  How is nested donation handled?
+
+>> B5: Describe the sequence of events when lock_release() is called
+>> on a lock that a higher-priority thread is waiting for.
+
+---- SYNCHRONIZATION ----
+
+>> B6: Describe a potential race in thread_set_priority() and explain
+>> how your implementation avoids it.  Can you use a lock to avoid
+>> this race?
+
+---- RATIONALE ----
+
+>> B7: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+
+
+--------------- Extra Credit Not Attempted ---------------------------------------
+
+
+              ADVANCED SCHEDULER [EXTRA CREDIT]
+              =================================
+
+---- DATA STRUCTURES ----
+
+>> C1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> C2: Suppose threads A, B, and C have nice values 0, 1, and 2.  Each
+>> has a recent_cpu value of 0.  Fill in the table below showing the
+>> scheduling decision and the priority and recent_cpu values for each
+>> thread after each given number of timer ticks:
+
+timer  recent_cpu    priority   thread
+ticks   A   B   C   A   B   C   to run
+-----  --  --  --  --  --  --   ------
+ 0
+ 4
+ 8
+12
+16
+20
+24
+28
+32
+36
+
+>> C3: Did any ambiguities in the scheduler specification make values
+>> in the table uncertain?  If so, what rule did you use to resolve
+>> them?  Does this match the behavior of your scheduler?
+
+>> C4: How is the way you divided the cost of scheduling between code
+>> inside and outside interrupt context likely to affect performance?
+
+---- RATIONALE ----
+
+>> C5: Briefly critique your design, pointing out advantages and
+>> disadvantages in your design choices.  If you were to have extra
+>> time to work on this part of the project, how might you choose to
+>> refine or improve your design?
+
